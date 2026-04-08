@@ -37,63 +37,82 @@ def optimize(f, g, x0, n, count, prob):
         'secret2': "local_descent"
     }
     strategy = strategy_map[prob]
+    x_history = [x0.copy()]
 
     # ----- local descent -----
     if strategy == "local_descent":
-        # initial step size
-        step_size = 1e-2
-        x = x0.copy()
-        x_best = x0.copy()
-
-        # 1. if termination condition is met, return x_best
-        if count() + 1 > n:
-            return x_best
-        
-        f_best = f(x_best)
-        f_current = f_best
-        alpha = step_size
-
-        while True:
-            if count() + 2 > n:
-                break
-            # 2. Determine descent direction
-            grad = g(x)
-            grad_norm = np.linalg.norm(grad)
-            # safe guard for zero gradient
-            if grad_norm < 1e-12:
-                break
-            
-            # normalized descent direction
-            descent_direction = -grad / (grad_norm + 1e-12)
-
-            improved = False
-            step = alpha
-
-            # try a few backtracking steps
-            for _ in range(4):
-                if count() + 1 > n:
-                    break
-
-                x_try = x + step * descent_direction
-                f_try = f(x_try)
-
-                if f_try < f_current:
-                    x = x_try
-                    f_current = f_try
-                    improved = True
-                    if f_try < f_best:
-                        x_best = x_try
-                        f_best = f_try
-                    break
-                else:
-                    step *= 0.5
-        
-            # adapt step size
-            if improved:
-                alpha = min(alpha * 20, 1.0)
-            else:
-                alpha *= 0.5
-                if alpha < 1e-10:
-                    break
+        x_history = local_descent(f, g, x0, n, count)
+        x_best = x_history[-1]
 
     return x_best
+    
+def local_descent(f, g, x0, n, count):
+    """
+    Local descent with backtracking line search and adaptive step size.
+    Args:
+        f (function): Function to be optimized
+        g (function): Gradient function for `f`
+        x0 (np.array): Initial position to start from
+        n (int): Number of evaluations allowed. Remember `g` costs twice of `f`
+        count (function): takes no arguments are returns current count
+    Returns:
+        x_history (np.array): best selection of variables found"""
+    # initial step size
+    step_size = 1
+    x = x0.copy()
+    x_best = x0.copy()
+    x_history = [x0.copy()]
+
+    # 1. if termination condition is met, return x_best
+    if count() + 1 > n:
+        return x_best
+    
+    f_best = f(x_best)
+    f_current = f_best
+    alpha = step_size
+
+    while True:
+        if count() + 2 > n:
+            break
+        # 2. Determine descent direction
+        grad = g(x)
+        grad_norm = np.linalg.norm(grad)
+        # safe guard for zero gradient
+        if grad_norm < 1e-12:
+            break
+        
+        # normalized descent direction
+        descent_direction = -grad / (grad_norm + 1e-12)
+
+        improved = False
+        step = alpha
+
+        # try a few backtracking steps
+        for _ in range(4):
+            if count() + 1 > n:
+                break
+
+            x_try = x + step * descent_direction
+            f_try = f(x_try)
+
+            if f_try < f_current:
+                x = x_try
+                x_history.append(x.copy())
+                f_current = f_try
+                improved = True
+                if f_try < f_best:
+                    x_best = x_try
+                    f_best = f_try
+                break
+            else:
+                step *= 0.5
+    
+        # adapt step size
+        if improved:
+            alpha = min(alpha * 20, 1.0)
+        else:
+            alpha *= 0.5
+            if alpha < 1e-10:
+                break
+
+    return x_history
