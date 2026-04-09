@@ -41,6 +41,7 @@ def optimize(f, g, x0, n, count, prob):
 
     # ----- local descent -----
     if strategy == "local_descent":
+        # print(f"Running local descent for {prob} with n={n}")
         x_history = local_descent(f, g, x0, n, count)
         x_best = x_history[-1]
 
@@ -96,6 +97,7 @@ def local_descent(f, g, x0, n, count):
             f_try = f(x_try)
 
             if f_try < f_current:
+                # print(f"Improved from {f_current:.4e} to {f_try:.4e} with step size {step:.2e} at count {count()}")
                 x = x_try
                 x_history.append(x.copy())
                 f_current = f_try
